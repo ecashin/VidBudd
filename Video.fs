@@ -85,9 +85,9 @@ let makeStarAdder (wd, ht) (chunkPowers: float [][]) (chunkAmps: float []) : (Im
 let makeWiperAdder (wd: int, ht: int) (audio: Audio.Track) =
         let colorConverter = Conversion.ColorSpaceConverter()
         let pathQueue = Queue<PointF [] * Rgb>()
-        let queueMax = 15
+        let queueMax = 25
         let mutable theta = System.Math.PI / 2.0
-        let penWd = 3.0
+        let penWd = (float (System.Math.Min(wd, ht))) / 60.0
         let startPoint = PointF(float32 penWd, float32 (float ht - penWd))
         let entropies = audio.PowerEntropies.[0] |> (Audio.scaleToRange -100.0 100.0) |> Array.map float32
         let smoothedAmps =
@@ -101,23 +101,22 @@ let makeWiperAdder (wd: int, ht: int) (audio: Audio.Track) =
                 |> Audio.scaleToRange -100.0 100.0
                 |> Array.map  float32
         let addWiper (img: Image<Rgba32>) (chunk: int) =
-                let endX = System.Math.Cos(theta) * (float wd * 2.0)
-                let endY = (float ht * 2.0) - (System.Math.Sin(theta) * (float ht * 2.0))
+                let endX = penWd + System.Math.Cos(theta) * (float wd)
+                let endY = (float ht - penWd) - (System.Math.Sin(theta) * (float ht))
                 let clampedEndX = System.Math.Clamp(endX, penWd, float wd - penWd)
                 let clampedEndY = System.Math.Clamp(endY, penWd, float ht - penWd)
                 let endPoint = PointF(float32 clampedEndX, float32 clampedEndY)
                 let points = [|startPoint; endPoint|]
-                // let color = Color(Rgba32(0uy, 0uy, 0uy, alpha))
                 let cieLabColor = CieLab(entropies.[chunk], smoothedAmps.[chunk], midRangeAmps.[chunk])
                 let rgbColor = colorConverter.ToRgb(&cieLabColor)
                 pathQueue.Enqueue((points, rgbColor))
                 if pathQueue.Count > queueMax then
                         (pathQueue.Dequeue()) |> ignore
-                theta <- theta - System.Math.PI / 360.0
+                theta <- theta - System.Math.PI / (360.0 * 2.0)  // half a degree
                 if theta <= 0.0 then
                         theta <- System.Math.PI / 2.0
                 for (j, (points, rgbColor)) in seq { for points in pathQueue do points } |> Seq.indexed do
-                        let alpha = 55 + 200 * ((j + 1) / pathQueue.Count) |> byte
+                        let alpha = 35 + 200 * ((j + 1) / pathQueue.Count) |> byte
                         let f v = (v * 255.0f) |> byte
                         let color = Color(Rgba32(f rgbColor.R, f rgbColor.G, f rgbColor.B, alpha))
                         img.Mutate(fun i -> i.DrawLines(color, float32 penWd, points) |> ignore)
