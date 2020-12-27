@@ -1,5 +1,31 @@
 # VidBudd
 
+## Introduction
+
+VidBudd is a .NET application developed and tested on Linux
+and written in the F# programming language.
+
+It analyzes an audio file and uses information about the audio
+to create video frames for assembly
+via the third-party `ffmpeg` tool.
+
+## Installation
+
+VidBudd is designed to run in place,
+in this git repository clone,
+after performing the following commands
+using .NET Core.
+
+Dependencies can be pre-installed
+with the command below.
+
+    dotnet restore
+
+The usage below results in automatic
+building when required.
+
+## Usage
+
 The usage example below assumes a list of files has been created
 for the background video frames.
 E.g., for frames extracted by the ffmpeg command below,
