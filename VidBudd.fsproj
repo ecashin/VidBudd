@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- <TargetFramework>netcoreapp2.2</TargetFramework> -->
+    <TargetFramework>netcoreapp5.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Audio.fs" />
+    <Compile Include="Video.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <!--<PackageReference Include="SixLabors.ImageSharp" Version="1.0.0-beta0006" /> -->
+    <PackageReference Include="SixLabors.ImageSharp" Version="1.0.2" />
+    <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="1.0.0-beta11" />
+    <PackageReference Include="Accord.Audio" Version="3.8.0" />
+    <PackageReference Include="Accord.DirectSound" Version="3.8.0" />
+    <PackageReference Include="Accord.Statistics" Version="3.8.0" />
+    <!-- FFMPEG not on Linux <PackageReference Include="Accord.Video" Version="3.8.0" /> -->
+    <!-- <PackageReference Include="Accord.Math" Version="3.8.0" /> -->
+    <PackageReference Include="LibVLCSharp" Version="3.4.9" />
+    <!-- <PackageReference Include="Xabe.FFmpeg" Version="4.3.1" /> -->
+    <!-- <PackageReference Include="MediaToolkit" Version="1.1.0.1" /> -->
+  </ItemGroup>
+</Project>
