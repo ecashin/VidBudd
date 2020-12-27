@@ -2,8 +2,8 @@
 open System.IO
 open Accord.DirectSound
 
-let outputWidth = 500
-let outputHeight = 250
+let outputWidth = 1000
+let outputHeight = 500
 
 let prefixFileName (path: string) (prefix: string) =
         sprintf "%s-%s" prefix (Path.GetFileName(path))

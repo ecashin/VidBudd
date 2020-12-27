@@ -9,7 +9,7 @@ open SixLabors.ImageSharp.Drawing
 open SixLabors.ImageSharp.Drawing.Processing
 
 let defaultBackground wd ht =
-    use bgImg = new Image<Rgba32>(wd, ht)
+    let bgImg = new Image<Rgba32>(wd, ht)  // XXXtodo: dispose manually later?
     let bgColor = Color(Rgba32(50uy, 50uy, 75uy))
     let imgRect = RectangleF(0f, 0f, float32 wd, float32 ht)
     bgImg.Mutate(fun i -> i.Fill(bgColor, imgRect) |> ignore)
@@ -44,6 +44,7 @@ let makeStarAdder (wd, ht) (chunkPowers: float [][]) (chunkAmps: float []) : (Im
         let ny = 2
         let offX = wd / (nx + 1)
         let offY = ht / (ny + 1)
+        let minOff = System.Math.Min(offX, offY) |> float
         let resetPositions () =
                 positions.Clear()
                 positions.Push([|
@@ -57,7 +58,7 @@ let makeStarAdder (wd, ht) (chunkPowers: float [][]) (chunkAmps: float []) : (Im
         resetPositions ()
         printfn "orig positions: %A" (positions.Peek())
         let normal = Accord.Statistics.Distributions.Univariate.NormalDistribution()
-        let rnorm (chunk: int) = 8.0 * chunkAmps.[chunk] * normal.Generate()
+        let rnorm (chunk: int) = (minOff / 4.0) * chunkAmps.[chunk] * normal.Generate()
         let confined (p: (float * float) []) =
                 let round (x: float) = System.Math.Round(x) |> int
                 Array.map (fun (x: float, y: float) ->
@@ -77,7 +78,7 @@ let makeStarAdder (wd, ht) (chunkPowers: float [][]) (chunkAmps: float []) : (Im
                 positions.Push(pos)
                 for (x, y) in (confined pos) do
                         // printfn "img wd:%d ht:%d x:%f y:%f" img.Width img.Height x y
-                        let star = Star(float32 x, float32 y, 5, float32 10.0, float32 30.0)
+                        let star = Star(float32 x, float32 y, 19, (float32 minOff) / 10.0f, (float32 minOff) / 3.0f)
                         img.Mutate(fun i -> i.Fill(Color.Red, star) |> ignore)
         addStar
 
