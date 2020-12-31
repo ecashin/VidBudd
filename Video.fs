@@ -1,5 +1,6 @@
 module Video
 
+open Accord.Statistics.Distributions.Univariate
 open System.Collections.Generic
 open SixLabors.ImageSharp
 open SixLabors.ImageSharp.ColorSpaces
@@ -121,3 +122,51 @@ let makeWiperAdder (wd: int, ht: int) (audio: Audio.Track) =
                         let color = Color(Rgba32(f rgbColor.R, f rgbColor.G, f rgbColor.B, alpha))
                         img.Mutate(fun i -> i.DrawLines(color, float32 penWd, points) |> ignore)
         addWiper
+
+let makeSwaps (nrow: int) (ncol: int) (wd: int) (ht: int) =
+    let dx = wd / (ncol + 1)
+    let dy = ht / (nrow + 1)
+    let chgWd = dx / 4
+    let chgHt = dy / 4
+    let chgMin = System.Math.Min(chgWd, chgHt)
+    let sd = float (System.Math.Min(dx, dy))
+    let mutable x = [|
+        for i in 1..ncol do
+        float (dx * i)
+    |]
+    let mutable y = [|
+        for i in 1..nrow do
+        float (dy * i)
+    |]
+    let clampx x = System.Math.Clamp(x, float (chgWd * 2), float (wd - 2 * chgWd))
+    let clampy y = System.Math.Clamp(y, float (chgHt * 2), float (ht - 2 * chgHt))
+    let normal = NormalDistribution()
+    let move () =
+        for i in 0..(ncol - 1) do
+            for j in 0..(nrow - 1) do
+                x.[i] <- clampx (x.[i] + sd * normal.Generate())
+                y.[j] <- clampy (y.[j] + sd * normal.Generate())
+    let chooser = UniformDiscreteDistribution(1, 5)
+    let rint (f: float) : int = System.Math.Round(f) |> int
+    let act (img: Image<Rgba32>) : unit =
+        for i in 0..(ncol - 1) do
+            for j in 0..(nrow - 1) do
+                let direction = chooser.Generate()
+                let other =
+                    match direction with
+                    | 1 -> (x.[i], y.[j] + (float chgHt))  // up
+                    | 2 -> (x.[i] + (float chgWd), y.[j])  // right
+                    | 3 -> (x.[i], y.[j] - (float chgHt))  // down
+                    | _ -> (x.[i] - (float chgWd), y.[j])  // left
+                // printfn "here:%A there:%A" (x.[i], y.[j]) other
+                // printfn "wd:%d ht:%d chgWd:%d chgHt:%d dx:%d dy:%d i:%d j:%d x:%A y:%A" wd ht chgWd chgHt dx dy i j x y
+                for iwin in -(chgMin / 2)..(chgMin / 2) do
+                    for jwin in -(chgMin / 2)..(chgMin / 2) do
+                        let herePos = ((rint x.[i]) + iwin, (rint y.[j]) + jwin)
+                        let therePos = ((fst other |> rint) + iwin, (snd other |> rint) + jwin)
+                        // printfn "herePos:%A therePos:%A" herePos therePos
+                        let pixel = img.[fst herePos, snd herePos]
+                        img.[fst herePos, snd herePos] <- img.[fst therePos, snd therePos]
+                        img.[fst therePos, snd therePos] <- pixel
+        move ()
+    act

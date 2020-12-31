@@ -15,6 +15,9 @@ let genFreqImages (audio: Audio.Track) (outPathPrefix: string) (bgFrameFiles: se
         let fNam i = sprintf "%s-%04d.jpg" outPathPrefix i
         let addWiper = Video.makeWiperAdder (wd, ht) audio
         let addStars = Video.makeStarAdder (wd, ht) chunkPowers powerSums
+        let swap = Video.makeSwaps 3 5 wd ht
+        let top10 = Audio.argTopK 10 powerSums
+        let mutable loud = 0
         let mutable bgFiles = List.ofSeq bgFrameFiles
         for i in 0..(chunkPowers.Length - 1) do
                 let img =
@@ -27,6 +30,11 @@ let genFreqImages (audio: Audio.Track) (outPathPrefix: string) (bgFrameFiles: se
                 Video.allBinsRects img chunkPowers.[i] powerSums.[i]
                 addWiper img i
                 addStars img i
+                if top10 |> Array.contains i then
+                        loud <- 4
+                if loud > 0 then
+                        loud <- loud - 1
+                        swap img
                 img.Save(fNam i)
 
 let genVidForAudio (chan: int) (audio: Audio.Track) (outPathPrefix: string) (bgFrameFiles: seq<string>) =
