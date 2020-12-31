@@ -102,8 +102,8 @@ let makeWiperAdder (wd: int, ht: int) (audio: Audio.Track) =
                 |> Audio.scaleToRange -100.0 100.0
                 |> Array.map  float32
         let addWiper (img: Image<Rgba32>) (chunk: int) =
-                let endX = penWd + System.Math.Cos(theta) * (float wd)
-                let endY = (float ht - penWd) - (System.Math.Sin(theta) * (float ht))
+                let endX = penWd + System.Math.Cos(theta) * (float wd) * 2.0
+                let endY = (float ht - penWd) - (System.Math.Sin(theta) * (float ht) * 2.0)
                 let clampedEndX = System.Math.Clamp(endX, penWd, float wd - penWd)
                 let clampedEndY = System.Math.Clamp(endY, penWd, float ht - penWd)
                 let endPoint = PointF(float32 clampedEndX, float32 clampedEndY)
