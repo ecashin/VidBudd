@@ -9,6 +9,23 @@ open SixLabors.ImageSharp.Processing
 open SixLabors.ImageSharp.Drawing
 open SixLabors.ImageSharp.Drawing.Processing
 
+let colorConverter = Conversion.ColorSpaceConverter()
+
+let rint (f: float) : int = System.Math.Round(f) |> int
+
+let cieLabComponentChooser = UniformContinuousDistribution(-100.0, 100.0)
+let cieLabGen () =
+        CieLab(
+                cieLabComponentChooser.Generate() |> float32,
+                cieLabComponentChooser.Generate() |> float32,
+                cieLabComponentChooser.Generate() |> float32
+        )
+let colorChoose () =
+        let cieLabColor = cieLabGen ()
+        let rgb = colorConverter.ToRgb(&cieLabColor)
+        let f v = (v * 255.0f) |> byte
+        Color(Rgba32(f rgb.R, f rgb.G, f rgb.B, 255uy))
+
 let defaultBackground wd ht =
     let bgImg = new Image<Rgba32>(wd, ht)  // XXXtodo: dispose manually later?
     let bgColor = Color(Rgba32(50uy, 50uy, 75uy))
@@ -84,7 +101,6 @@ let makeStarAdder (wd, ht) (chunkPowers: float [][]) (chunkAmps: float []) : (Im
         addStar
 
 let makeWiperAdder (wd: int, ht: int) (audio: Audio.Track) =
-        let colorConverter = Conversion.ColorSpaceConverter()
         let pathQueue = Queue<PointF [] * Rgb>()
         let queueMax = 25
         let mutable theta = System.Math.PI / 2.0
@@ -147,7 +163,6 @@ let makeSwaps (nrow: int) (ncol: int) (wd: int) (ht: int) =
                 x.[i] <- clampx (x.[i] + sd * normal.Generate())
                 y.[j] <- clampy (y.[j] + sd * normal.Generate())
     let chooser = UniformDiscreteDistribution(1, 5)
-    let rint (f: float) : int = System.Math.Round(f) |> int
     let act (img: Image<Rgba32>) : unit =
         for i in 0..(ncol - 1) do
             for j in 0..(nrow - 1) do
@@ -170,3 +185,30 @@ let makeSwaps (nrow: int) (ncol: int) (wd: int) (ht: int) =
                         img.[fst therePos, snd therePos] <- pixel
         move ()
     act
+
+let makeStickBreaker (wd: int) (ht: int) =
+        let binaryChoice = UniformDiscreteDistribution(1, 3)  // vertical or horizontal
+        let floor (f: float32) = System.Math.Floor(float f) |> float32
+        let mutable rect = RectangleF(0.0f, 0.0f, wd |> float32, ht |> float32)
+        let stickBreak (img: Image<Rgba32>) =
+                let (a, b) =
+                        match binaryChoice.Generate() with
+                        | 1 ->  // horizontal split
+                                let half = rect.Width / 2.0f |> floor
+                                (
+                                        RectangleF(rect.X, rect.Y, half, rect.Height),
+                                        RectangleF(rect.X + half, rect.Y, half, rect.Height)
+                                )
+                        | _ ->  // vertical split
+                                let half = rect.Height / 2.0f |> floor
+                                (
+                                        RectangleF(rect.X, rect.Y, rect.Width, half),
+                                        RectangleF(rect.X, rect.Y + half, rect.Width, half)
+                                )
+                if a.Height > 1.0f && a.Width > 1.0f then
+                        let (fillRect, nextRect) =
+                                if binaryChoice.Generate() = 1 then (a, b) else (b, a)
+                        img.Mutate(fun i ->
+                                i.Fill(colorChoose (), fillRect) |> ignore)
+                        rect <- nextRect
+        stickBreak

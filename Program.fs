@@ -1,4 +1,12 @@
-﻿open SixLabors.ImageSharp
+﻿// find number of chunks (say, 129):
+// fps=10; wav=$HOME/DP-03/AKS-1-DirtBox.wav;  time sh -c "dotnet run $fps $wav"
+// generate stick-breaking backgrounds:
+// rm -f sb-bg-*.png; fps=10; wav=$HOME/DP-03/AKS-1-DirtBox.wav;  time sh -c "dotnet run 129"
+open SixLabors.ImageSharp
+open SixLabors.ImageSharp.PixelFormats
+open SixLabors.ImageSharp.Processing
+open SixLabors.ImageSharp.Drawing.Processing
+
 open System.IO
 open Accord.DirectSound
 
@@ -59,7 +67,19 @@ let readLines (fileName: string) =
 [<EntryPoint>]
 let main argv =
         match argv with
-        | [|fps; wavPath; outPathPrefix; bgFramesFileName|] ->
+        | [| nBgFrames |] ->
+                let breaker = Video.makeStickBreaker outputWidth outputHeight
+                let img = new Image<Rgba32>(outputWidth, outputHeight)
+                let imgRect = RectangleF(0.0f, 0.0f, float32 img.Width, float32 img.Height)
+                img.Mutate(fun i -> i.Fill(Video.colorChoose (), imgRect) |> ignore)
+                for i in 1..(int nBgFrames) do
+                        breaker img
+                        img.Save(sprintf "sb-bg-%04d.png" i)
+        | [| fps; wavPath |] ->
+                use wfas = new WaveFileAudioSource(wavPath) // ... just to reference DirectSound
+                let audio = Audio.Track(wavPath, int fps)
+                printfn "number of chunks: %d" audio.Powers.[0].Length
+        | [| fps; wavPath; outPathPrefix; bgFramesFileName |] ->
                 use wfas = new WaveFileAudioSource(wavPath) // ... just to reference DirectSound
                 let audio = Audio.Track(wavPath, int fps)
                 printfn "Audio signal from %s" wavPath
@@ -68,5 +88,5 @@ let main argv =
                 printfn "  sample rate: %d" audio.Signal.SampleRate
                 printfn "  number of samples: %d" audio.Signal.Samples
                 genVidForAudio 0 audio outPathPrefix (readLines bgFramesFileName)
-        | _ -> failwith "Must have exactly two arguments."
+        | _ -> failwith "Must have exactly one, two, or four arguments."
         0
