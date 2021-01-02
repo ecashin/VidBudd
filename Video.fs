@@ -186,29 +186,41 @@ let makeSwaps (nrow: int) (ncol: int) (wd: int) (ht: int) =
         move ()
     act
 
-let makeStickBreaker (wd: int) (ht: int) =
+let makeStickBreaker (wd: int) (ht: int) (fillFraction: float32) =
         let binaryChoice = UniformDiscreteDistribution(1, 3)  // vertical or horizontal
         let floor (f: float32) = System.Math.Floor(float f) |> float32
-        let mutable rect = RectangleF(0.0f, 0.0f, wd |> float32, ht |> float32)
+        let wholeImgRect = RectangleF(0.0f, 0.0f, wd |> float32, ht |> float32)
+        let mutable rect = wholeImgRect
+        let horizontalSplit (rect: RectangleF) =
+                let fillWd = floor (rect.Width * fillFraction)
+                let bigFirst = binaryChoice.Generate() = 1
+                let aWd = if bigFirst then fillWd else rect.Width - fillWd
+                let a = RectangleF(rect.X, rect.Y, aWd, rect.Height)
+                let b = RectangleF(rect.X + aWd, rect.Y, rect.Width - aWd, rect.Height)
+                if bigFirst then a, b else b, a
+        let verticalSplit (rect: RectangleF) =
+                let fillHt = floor (rect.Height * fillFraction)
+                let bigFirst = binaryChoice.Generate() = 1
+                let aHt = if bigFirst then fillHt else rect.Height - fillHt
+                let a = RectangleF(rect.X, rect.Y, rect.Width, aHt)
+                let b = RectangleF(rect.X, rect.Y + aHt, rect.Width, rect.Height - aHt)
+                if bigFirst then a, b else b, a
         let stickBreak (img: Image<Rgba32>) =
                 let (a, b) =
-                        match binaryChoice.Generate() with
-                        | 1 ->  // horizontal split
-                                let half = rect.Width / 2.0f |> floor
-                                (
-                                        RectangleF(rect.X, rect.Y, half, rect.Height),
-                                        RectangleF(rect.X + half, rect.Y, half, rect.Height)
-                                )
-                        | _ ->  // vertical split
-                                let half = rect.Height / 2.0f |> floor
-                                (
-                                        RectangleF(rect.X, rect.Y, rect.Width, half),
-                                        RectangleF(rect.X, rect.Y + half, rect.Width, half)
-                                )
-                if a.Height > 1.0f && a.Width > 1.0f then
-                        let (fillRect, nextRect) =
-                                if binaryChoice.Generate() = 1 then (a, b) else (b, a)
+                        if rect.Width > rect.Height then
+                                horizontalSplit rect
+                        else
+                                verticalSplit rect
+                printfn "rect:%A a:%A b:%A" rect a b
+                if b.Height > 1.0f && b.Width > 1.0f then
                         img.Mutate(fun i ->
-                                i.Fill(colorChoose (), fillRect) |> ignore)
-                        rect <- nextRect
-        stickBreak
+                                i.Fill(colorChoose (), a) |> ignore)
+                        rect <- a
+        let edges (img: Image<Rgba32>) =
+                img.Mutate(fun i -> i.DetectEdges().Brightness(25.0f) |> ignore)
+                rect <- wholeImgRect
+        (fun i ->
+                if System.Math.Min(rect.Width, rect.Height) < (wholeImgRect.Height / 20.0f) then
+                        edges i
+                else
+                        stickBreak i)

@@ -68,7 +68,7 @@ let readLines (fileName: string) =
 let main argv =
         match argv with
         | [| nBgFrames |] ->
-                let breaker = Video.makeStickBreaker outputWidth outputHeight
+                let breaker = Video.makeStickBreaker outputWidth outputHeight 0.7f
                 let img = new Image<Rgba32>(outputWidth, outputHeight)
                 let imgRect = RectangleF(0.0f, 0.0f, float32 img.Width, float32 img.Height)
                 img.Mutate(fun i -> i.Fill(Video.colorChoose (), imgRect) |> ignore)
